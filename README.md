@@ -1,3 +1,5 @@
+[Cutting Calculator](./image.png)
+
 # Linear Cutting Calculator (Streamlit)
 
 Modern replacement for the old Excel linear cutting stock calculator (version Bakanov 1.03).
