@@ -1,38 +1,41 @@
-# Калькулятор линейного раскроя (Streamlit)
+# Linear Cutting Calculator (Streamlit)
 
-Современная замена старому Excel-калькулятору линейного раскроя (версия Баканова 1.03).
+## Features
 
-## Возможности
+- Accounts for **end trimming** and **tool width (kerf)**
+- Optimizes the number of bars (ILP + heuristic)
+- Visual bar cutting diagrams
+- Export results to CSV
+- Works fully offline
 
-- Учёт **торцевого спила** и **ширины инструмента (пропила)**
-- Оптимизация количества хлыстов (ILP + эвристика)
-- Наглядная визуализация схем раскроя
-- Экспорт результатов в CSV
-- Работает полностью оффлайн
-
-## Установка и запуск
+## Installation and usage
 
 ```bash
 cd linear_cut_streamlit
-pip install -r requirements.txt
-streamlit run app.py
+install.bat
+.\.venv\Scripts\streamlit run app.py
 ```
 
-## Параметры
+Or manually:
 
-| Параметр | Описание |
-|----------|----------|
-| Длина хлыста | Стандартная длина профиля |
-| Торцевый спил | Срез с конца хлыста |
-| Ширина инструмента | Пропил — прибавляется к каждой детали |
-| Минимальный полезный остаток | Пока информативно |
+```bash
+cd linear_cut_streamlit
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\streamlit run app.py
+```
 
-## Методы оптимизации
+## Parameters
 
-- **Авто** — выбирает ILP или быстрый FFD в зависимости от размера задачи
-- **ILP** — математическая оптимизация (PuLP + CBC), близко к оптимуму
-- **First Fit Decreasing** — очень быстрый эвристический алгоритм
+| Parameter | Description |
+|-----------|-------------|
+| Bar length | Standard profile length |
+| End trim | Cut from the end of the bar |
+| Tool width | Kerf — added to each piece |
+| Minimum useful remnant | Informational only |
 
-## Пример из старого Excel
+## Optimization methods
 
-В боковой панели есть кнопка «Загрузить пример из старого Excel» — подставляет данные из файла V1.03 (хлыст 2000 мм, пропил 5 мм).
+- **Auto** — chooses ILP or fast FFD depending on task size
+- **ILP** — mathematical optimization (PuLP + CBC), close to optimal
+- **First Fit Decreasing** — very fast heuristic algorithm
