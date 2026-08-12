@@ -1,4 +1,4 @@
-![Cutting Calculato](image.png)
+![Cutting Calculator](image.png)
 
 # Linear Cutting Calculator (Streamlit)
 
@@ -68,3 +68,7 @@ In the sidebar there is a "Load example from old Excel" button — fills in data
 ---
 
 Version 1.0
+
+## Demo
+
+[Cutting Calculator](https://olegushakov-pl-linear-cut-streamlit-app-j0ah4s.streamlit.app/)
