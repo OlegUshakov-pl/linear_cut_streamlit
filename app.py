@@ -1,6 +1,6 @@
 """
-Калькулятор линейного раскроя (1D Cutting Stock)
-Современная версия на Streamlit + PuLP / OR-Tools
+Linear cutting stock calculator (1D Cutting Stock)
+Modern version on Streamlit + PuLP / OR-Tools
 """
 
 import streamlit as st
@@ -10,7 +10,7 @@ from typing import List, Dict, Tuple, Optional
 from collections import Counter
 import io
 
-# Попытка использовать OR-Tools, иначе PuLP
+# Try OR-Tools first, otherwise PuLP
 try:
     from ortools.linear_solver import pywraplp
     SOLVER_BACKEND = "ortools"
@@ -20,7 +20,7 @@ except ImportError:
 
 
 st.set_page_config(
-    page_title="Линейный раскрой",
+    page_title="Linear cutting",
     page_icon="✂️",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -28,7 +28,7 @@ st.set_page_config(
 
 
 # ============================================================
-#  Ядро оптимизации
+#  Optimization core
 # ============================================================
 
 def generate_patterns(
@@ -37,9 +37,9 @@ def generate_patterns(
     max_pieces_per_bar: int = 20,
 ) -> List[Tuple[int, ...]]:
     """
-    Генерирует все разумные паттерны раскроя (комбинации деталей,
-    которые помещаются в один хлыст).
-    Используется рекурсивный перебор с отсечением.
+    Generates all reasonable cutting patterns (combinations of pieces
+    that fit into one bar).
+    Uses recursive search with pruning.
     """
     n = len(piece_lengths)
     patterns = []
@@ -53,11 +53,11 @@ def generate_patterns(
             L = piece_lengths[i]
             if L <= remaining:
                 current.append(L)
-                rec(i, remaining - L, current)  # можно брать ту же деталь ещё
+                rec(i, remaining - L, current)  # can take the same piece again
                 current.pop()
 
     rec(0, stock_length, [])
-    # Убираем дубликаты
+    # Remove duplicates
     unique = list(set(patterns))
     return unique
 
@@ -68,8 +68,8 @@ def solve_cutting_stock_pulp(
     time_limit: int = 30,
 ) -> Tuple[List[Dict], int]:
     """
-    Решает задачу раскроя через генерацию паттернов + ILP (PuLP).
-    Возвращает список схем и общее количество хлыстов.
+    Solves the cutting stock problem using pattern generation + ILP (PuLP).
+    Returns a list of patterns and the total number of bars.
     """
     import pulp
 
@@ -77,26 +77,26 @@ def solve_cutting_stock_pulp(
     if not lengths:
         return [], 0
 
-    # Генерируем паттерны
+    # Generate patterns
     patterns = generate_patterns(lengths, stock_length)
     if not patterns:
         return [], 0
 
-    # Ограничиваем количество паттернов, если их слишком много
+    # Limit the number of patterns if there are too many
     if len(patterns) > 3000:
-        # Оставляем самые плотные
+        # Keep the densest ones
         patterns = sorted(patterns, key=lambda p: sum(p), reverse=True)[:3000]
 
-    # Модель
+    # Model
     prob = pulp.LpProblem("CuttingStock", pulp.LpMinimize)
 
-    # Переменные: сколько раз использовать каждый паттерн
+    # Variables: how many times each pattern is used
     x = [pulp.LpVariable(f"p_{i}", lowBound=0, cat="Integer") for i in range(len(patterns))]
 
-    # Цель: минимум хлыстов
+    # Objective: minimize bars
     prob += pulp.lpSum(x)
 
-    # Ограничения спроса
+    # Demand constraints
     for length, qty in demands.items():
         prob += (
             pulp.lpSum(x[i] * patterns[i].count(length) for i in range(len(patterns)))
@@ -104,14 +104,14 @@ def solve_cutting_stock_pulp(
             f"demand_{length}",
         )
 
-    # Решаем
+    # Solve
     status = prob.solve(pulp.PULP_CBC_CMD(msg=False, timeLimit=time_limit))
 
     if pulp.LpStatus[status] not in ("Optimal", "Feasible"):
-        # Fallback — простой First Fit Decreasing
+        # Fallback — simple First Fit Decreasing
         return solve_ffd(demands, stock_length)
 
-    # Собираем результат
+    # Collect results
     result_patterns = []
     total_bars = 0
     for i, var in enumerate(x):
@@ -126,22 +126,22 @@ def solve_cutting_stock_pulp(
             })
             total_bars += cnt
 
-    # Сортируем по убыванию использования
+    # Sort by descending usage
     result_patterns.sort(key=lambda p: (-p["used"], -p["count"]))
     return result_patterns, total_bars
 
 
 def solve_ffd(demands: Dict[int, int], stock_length: int) -> Tuple[List[Dict], int]:
     """
-    First Fit Decreasing + жадное заполнение.
-    Надёжный fallback.
+    First Fit Decreasing + greedy filling.
+    Reliable fallback.
     """
-    # Разворачиваем в список деталей
+    # Expand into a list of pieces
     items = []
     for L, q in sorted(demands.items(), reverse=True):
         items.extend([L] * q)
 
-    bars = []  # каждый бар — список длин
+    bars = []  # each bar is a list of lengths
 
     for item in items:
         placed = False
@@ -153,7 +153,7 @@ def solve_ffd(demands: Dict[int, int], stock_length: int) -> Tuple[List[Dict], i
         if not placed:
             bars.append([item])
 
-    # Группируем одинаковые схемы
+    # Group identical patterns
     from collections import defaultdict
     groups = defaultdict(int)
     for bar in bars:
@@ -180,7 +180,7 @@ def solve_cutting_stock(
     method: str = "auto",
 ) -> Tuple[List[Dict], int]:
     """
-    Главная точка входа.
+    Main entry point.
     method: "auto" | "ilp" | "ffd"
     """
     total_pieces = sum(demands.values())
@@ -196,7 +196,7 @@ def solve_cutting_stock(
 
 
 # ============================================================
-#  Вспомогательные функции
+#  Helper functions
 # ============================================================
 
 def prepare_demands(
@@ -206,30 +206,30 @@ def prepare_demands(
     end_cut: float,
 ) -> Tuple[Dict[int, int], float, List[str]]:
     """
-    Подготавливает словарь спроса с учётом пропила.
-    Возвращает (demands, effective_stock, warnings)
+    Builds the demand dictionary taking the kerf into account.
+    Returns (demands, effective_stock, warnings)
     """
     warnings = []
     effective_stock = stock_length - end_cut
     demands: Dict[int, int] = {}
 
     for _, row in df.iterrows():
-        length = float(row["Длина, мм"])
-        qty = int(row["Количество"])
+        length = float(row["Length, mm"])
+        qty = int(row["Quantity"])
         if length <= 0 or qty <= 0:
             continue
 
-        # К длине детали прибавляем пропил (как в оригинале)
+        # The kerf is added to each piece length
         effective_length = length + kerf
 
         if effective_length > effective_stock:
             warnings.append(
-                f"Деталь {length} мм (с пропилом {effective_length:.1f}) "
-                f"длиннее хлыста ({effective_stock:.1f} мм) — пропущена"
+                f"Piece {length} mm (with kerf {effective_length:.1f}) "
+                f"is longer than the bar ({effective_stock:.1f} mm) — skipped"
             )
             continue
 
-        # Работаем в целых (мм)
+        # Work with integers (mm)
         L = int(round(effective_length))
         demands[L] = demands.get(L, 0) + qty
 
@@ -237,87 +237,87 @@ def prepare_demands(
 
 
 def format_pattern(pieces: List[int], kerf: float) -> str:
-    """Показывает реальные длины деталей (без пропила)."""
+    """Shows the real piece lengths (without the kerf)."""
     real = [max(0, int(round(p - kerf))) for p in pieces]
     return " + ".join(map(str, real))
 
 
 # ============================================================
-#  Интерфейс
+#  Interface
 # ============================================================
 
 def main():
-    st.title("✂️ Калькулятор линейного раскроя")
-    st.caption("Современная версия · Streamlit + математическая оптимизация")
+    st.title("✂️ Linear cutting calculator")
+    st.caption("Modern version · Streamlit + mathematical optimization")
 
-    # ---------- Боковая панель ----------
+    # ---------- Sidebar ----------
     with st.sidebar:
-        st.header("Параметры хлыста")
+        st.header("Bar parameters")
         stock_length = st.number_input(
-            "Длина хлыста, мм",
+            "Bar length, mm",
             min_value=100.0,
             value=6000.0,
             step=100.0,
-            help="Стандартная длина профиля / трубы / бруса",
+            help="Standard length of profile / pipe / timber",
         )
         end_cut = st.number_input(
-            "Торцевый спил, мм",
+            "End trim, mm",
             min_value=0.0,
             value=0.0,
             step=1.0,
-            help="Сколько срезается с конца хлыста (торцевание)",
+            help="How much is cut off the end of the bar (end trimming)",
         )
         kerf = st.number_input(
-            "Ширина инструмента (пропил), мм",
+            "Tool width (kerf), mm",
             min_value=0.0,
             value=3.0,
             step=0.5,
-            help="Толщина реза. Прибавляется к каждой детали",
+            help="Cut thickness. Added to each piece",
         )
         min_remnant = st.number_input(
-            "Минимальный полезный остаток, мм",
+            "Minimum useful remnant, mm",
             min_value=0.0,
             value=0.0,
             step=10.0,
-            help="Остатки короче этого значения считаются отходом (пока информативно)",
+            help="Remnants shorter than this count as waste (informational for now)",
         )
 
         st.divider()
         method = st.selectbox(
-            "Метод оптимизации",
+            "Optimization method",
             options=["auto", "ilp", "ffd"],
             format_func=lambda x: {
-                "auto": "Авто (рекомендуется)",
-                "ilp": "ILP (точный, медленнее)",
-                "ffd": "First Fit Decreasing (быстрый)",
+                "auto": "Auto (recommended)",
+                "ilp": "ILP (exact, slower)",
+                "ffd": "First Fit Decreasing (fast)",
             }[x],
-            help="ILP ищет близкий к оптимуму раскрой. FFD — очень быстрый эвристический.",
+            help="ILP searches for a near-optimal cutting plan. FFD is a very fast heuristic.",
         )
 
         st.divider()
-        st.markdown("**Пример данных**")
-        if st.button("Загрузить пример из старого Excel"):
+        st.markdown("**Example data**")
+        if st.button("Load example from old Excel"):
             st.session_state["example_loaded"] = True
 
-    # ---------- Таблица деталей ----------
-    st.subheader("Детали")
+    # ---------- Pieces table ----------
+    st.subheader("Pieces")
 
     if "example_loaded" in st.session_state and st.session_state["example_loaded"]:
         default_df = pd.DataFrame({
-            "Название": [
-                "Деталь 1", "Деталь 2", "Деталь 3", "Деталь 4",
-                "Деталь 5", "Деталь 6", "Деталь 7", "Деталь 8"
+            "Name": [
+                "Piece 1", "Piece 2", "Piece 3", "Piece 4",
+                "Piece 5", "Piece 6", "Piece 7", "Piece 8"
             ],
-            "Длина, мм": [540, 790, 1680, 580, 390, 680, 760, 1200],
-            "Количество": [2, 2, 4, 2, 2, 2, 4, 4],
+            "Length, mm": [540, 790, 1680, 580, 390, 680, 760, 1200],
+            "Quantity": [2, 2, 4, 2, 2, 2, 4, 4],
         })
-        # Сбрасываем флаг, чтобы можно было редактировать
+        # Reset the flag so it can be edited again
         st.session_state["example_loaded"] = False
     else:
         default_df = pd.DataFrame({
-            "Название": ["Деталь 1", "Деталь 2"],
-            "Длина, мм": [1500.0, 2200.0],
-            "Количество": [4, 6],
+            "Name": ["Piece 1", "Piece 2"],
+            "Length, mm": [1500.0, 2200.0],
+            "Quantity": [4, 6],
         })
 
     df = st.data_editor(
@@ -325,22 +325,22 @@ def main():
         num_rows="dynamic",
         use_container_width=True,
         column_config={
-            "Название": st.column_config.TextColumn("Название", width="medium"),
-            "Длина, мм": st.column_config.NumberColumn("Длина, мм", min_value=1, step=1, format="%.0f"),
-            "Количество": st.column_config.NumberColumn("Количество", min_value=1, step=1),
+            "Name": st.column_config.TextColumn("Name", width="medium"),
+            "Length, mm": st.column_config.NumberColumn("Length, mm", min_value=1, step=1, format="%.0f"),
+            "Quantity": st.column_config.NumberColumn("Quantity", min_value=1, step=1),
         },
         key="pieces_editor",
     )
 
     col_run, col_clear = st.columns([1, 5])
     with col_run:
-        run = st.button("Рассчитать раскрой", type="primary", use_container_width=True)
+        run = st.button("Calculate cutting plan", type="primary", use_container_width=True)
 
-    # ---------- Расчёт ----------
+    # ---------- Calculation ----------
     if run:
-        # Валидация
-        if df.empty or df["Длина, мм"].isna().all():
-            st.error("Добавьте хотя бы одну деталь")
+        # Validation
+        if df.empty or df["Length, mm"].isna().all():
+            st.error("Add at least one piece")
             return
 
         demands, effective_stock, warnings = prepare_demands(
@@ -351,95 +351,95 @@ def main():
             st.warning(w)
 
         if not demands:
-            st.error("Нет ни одной детали, которая помещается в хлыст")
+            st.error("No piece fits into the bar")
             return
 
-        with st.spinner("Оптимизирую раскрой..."):
+        with st.spinner("Optimizing cutting plan..."):
             patterns, total_bars = solve_cutting_stock(
                 demands, int(round(effective_stock)), method=method
             )
 
         if total_bars == 0:
-            st.error("Не удалось построить раскрой")
+            st.error("Failed to build a cutting plan")
             return
 
-        # ---------- Результаты ----------
+        # ---------- Results ----------
         total_length_needed = sum(
             (L - kerf) * q for L, q in demands.items()
         )
         total_stock_length = total_bars * stock_length
         total_waste = total_stock_length - total_length_needed - total_bars * end_cut
-        # Более точный расчёт отхода с учётом пропилов
+        # More accurate waste calculation accounting for kerfs
         total_kerf_loss = sum(kerf * q for q in demands.values())
         usable = total_length_needed
         efficiency = (usable / (total_bars * effective_stock)) * 100 if total_bars else 0
 
-        st.success(f"**Готово!** Использовано **{total_bars}** хлыст(ов)")
+        st.success(f"**Done!** Used **{total_bars}** bar(s)")
 
-        # Метрики
+        # Metrics
         m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Хлыстов", total_bars)
-        m2.metric("Использование", f"{efficiency:.1f}%")
-        m3.metric("Общий полезный метраж", f"{usable:.0f} мм")
-        m4.metric("Суммарный отход", f"{total_bars * effective_stock - sum(p['used'] * p['count'] for p in patterns):.0f} мм")
+        m1.metric("Bars", total_bars)
+        m2.metric("Usage", f"{efficiency:.1f}%")
+        m3.metric("Total useful length", f"{usable:.0f} mm")
+        m4.metric("Total waste", f"{total_bars * effective_stock - sum(p['used'] * p['count'] for p in patterns):.0f} mm")
 
         st.divider()
 
-        # Таблица схем
-        st.subheader("Схемы раскроя")
+        # Cutting patterns table
+        st.subheader("Cutting patterns")
 
         rows = []
         for idx, p in enumerate(patterns, 1):
             real_pieces = [max(0, int(round(x - kerf))) for x in p["pieces"]]
             rows.append({
-                "№": idx,
-                "Схема (длины деталей)": " + ".join(map(str, real_pieces)),
-                "Использовано, мм": int(round(p["used"] + end_cut)),  # примерно как в оригинале
-                "Остаток, мм": int(round(effective_stock - p["used"])),
-                "Повторов": p["count"],
-                "Деталей в схеме": len(p["pieces"]),
+                "#": idx,
+                "Pattern (piece lengths)": " + ".join(map(str, real_pieces)),
+                "Used, mm": int(round(p["used"] + end_cut)),
+                "Remainder, mm": int(round(effective_stock - p["used"])),
+                "Repeats": p["count"],
+                "Pieces in pattern": len(p["pieces"]),
             })
 
         result_df = pd.DataFrame(rows)
         st.dataframe(result_df, use_container_width=True, hide_index=True)
 
-        # Визуализация
-        st.subheader("Визуализация схем")
+        # Visualization
+        st.subheader("Pattern visualization")
         show_visualization(patterns, effective_stock, kerf, end_cut)
 
-        # Экспорт
+        # Export
         st.divider()
-        st.subheader("Экспорт")
+        st.subheader("Export")
         export_df = result_df.copy()
         csv = export_df.to_csv(index=False).encode("utf-8-sig")
         st.download_button(
-            "Скачать CSV",
+            "Download CSV",
             data=csv,
-            file_name="raskroy.csv",
+            file_name="cutting_plan.csv",
             mime="text/csv",
         )
 
-        # Подробный текстовый отчёт
-        with st.expander("Текстовый отчёт (для печати)"):
+        # Detailed text report
+        with st.expander("Text report (for printing)"):
             report = []
-            report.append(f"Длина хлыста: {stock_length} мм")
-            report.append(f"Торцевый спил: {end_cut} мм")
-            report.append(f"Пропил: {kerf} мм")
-            report.append(f"Всего хлыстов: {total_bars}")
-            report.append(f"Использование: {efficiency:.1f}%")
+            report.append(f"Bar length: {stock_length} mm")
+            report.append(f"End trim: {end_cut} mm")
+            report.append(f"Kerf: {kerf} mm")
+            report.append(f"Total bars: {total_bars}")
+            report.append(f"Usage: {efficiency:.1f}%")
             report.append("")
             for idx, p in enumerate(patterns, 1):
                 real = [max(0, int(round(x - kerf))) for x in p["pieces"]]
                 report.append(
-                    f"Схема {idx} × {p['count']}: "
+                    f"Pattern {idx} × {p['count']}: "
                     f"{' + '.join(map(str, real))}  "
-                    f"(остаток {effective_stock - p['used']:.0f} мм)"
+                    f"(remainder {effective_stock - p['used']:.0f} mm)"
                 )
             st.code("\n".join(report))
 
 
 def show_visualization(patterns, effective_stock, kerf, end_cut):
-    """Простая визуализация полосками через HTML."""
+    """Simple bar visualization using HTML."""
     colors = [
         "#4e79a7", "#f28e2b", "#e15759", "#76b7b2", "#59a14f",
         "#edc948", "#b07aa1", "#ff9da7", "#9c755f", "#bab0ac",
@@ -451,9 +451,9 @@ def show_visualization(patterns, effective_stock, kerf, end_cut):
         used = p["used"]
         waste = effective_stock - used
 
-        # Полоска
+        # Bar strip
         bar_html = f'<div style="margin-bottom:14px;">'
-        bar_html += f'<div style="font-size:13px; margin-bottom:4px;"><b>Схема {idx+1}</b> × {p["count"]} &nbsp;|&nbsp; остаток {waste:.0f} мм</div>'
+        bar_html += f'<div style="font-size:13px; margin-bottom:4px;"><b>Pattern {idx+1}</b> × {p["count"]} &nbsp;|&nbsp; remainder {waste:.0f} mm</div>'
         bar_html += '<div style="display:flex; height:28px; border:1px solid #ccc; border-radius:4px; overflow:hidden; background:#f0f0f0;">'
 
         for i, length in enumerate(p["pieces"]):
@@ -461,7 +461,7 @@ def show_visualization(patterns, effective_stock, kerf, end_cut):
             color = colors[i % len(colors)]
             real_len = max(0, int(round(length - kerf)))
             bar_html += (
-                f'<div title="{real_len} мм" style="width:{pct}%; background:{color}; '
+                f'<div title="{real_len} mm" style="width:{pct}%; background:{color}; '
                 f'display:flex; align-items:center; justify-content:center; '
                 f'color:white; font-size:11px; font-weight:600;">{real_len}</div>'
             )
@@ -469,7 +469,7 @@ def show_visualization(patterns, effective_stock, kerf, end_cut):
         if waste > 0.5:
             pct_w = (waste / effective_stock) * 100
             bar_html += (
-                f'<div title="Отход {waste:.0f} мм" style="width:{pct_w}%; background:#e0e0e0; '
+                f'<div title="Waste {waste:.0f} mm" style="width:{pct_w}%; background:#e0e0e0; '
                 f'display:flex; align-items:center; justify-content:center; '
                 f'color:#666; font-size:11px;">{int(round(waste))}</div>'
             )
