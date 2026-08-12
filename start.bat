@@ -12,4 +12,6 @@ if not exist ".venv\Scripts\streamlit.exe" (
 
 echo Starting Linear Cutting Calculator...
 call ".venv\Scripts\streamlit.exe" run app.py
+echo.
+echo  Version 1.0
 pause

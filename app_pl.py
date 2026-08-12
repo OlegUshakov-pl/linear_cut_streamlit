@@ -1,6 +1,6 @@
 """
-Linear cutting stock calculator (1D Cutting Stock)
-Modern version on Streamlit + PuLP / OR-Tools
+Kalkulator cięcia liniowego (1D Cutting Stock)
+Wersja nowoczesna na Streamlit + PuLP / OR-Tools
 """
 
 import streamlit as st
@@ -10,7 +10,7 @@ from typing import List, Dict, Tuple, Optional
 from collections import Counter
 import io
 
-# Try OR-Tools first, otherwise PuLP
+# Najpierw próbujemy OR-Tools, w przeciwnym razie PuLP
 try:
     from ortools.linear_solver import pywraplp
     SOLVER_BACKEND = "ortools"
@@ -20,7 +20,7 @@ except ImportError:
 
 
 st.set_page_config(
-    page_title="Linear cutting",
+    page_title="Cięcie liniowe",
     page_icon="✂️",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -28,7 +28,7 @@ st.set_page_config(
 
 
 # ============================================================
-#  Optimization core
+#  Rdzeń optymalizacji
 # ============================================================
 
 def generate_patterns(
@@ -37,9 +37,9 @@ def generate_patterns(
     max_pieces_per_bar: int = 20,
 ) -> List[Tuple[int, ...]]:
     """
-    Generates all reasonable cutting patterns (combinations of pieces
-    that fit into one bar).
-    Uses recursive search with pruning.
+    Generuje wszystkie sensowne schematy cięcia (kombinacje elementów,
+    które mieszczą się w jednym pręcie).
+    Używa rekurencyjnego przeszukiwania z przycinaniem.
     """
     n = len(piece_lengths)
     patterns = []
@@ -53,11 +53,11 @@ def generate_patterns(
             L = piece_lengths[i]
             if L <= remaining:
                 current.append(L)
-                rec(i, remaining - L, current)  # can take the same piece again
+                rec(i, remaining - L, current)  # można wziąć ten sam element ponownie
                 current.pop()
 
     rec(0, stock_length, [])
-    # Remove duplicates
+    # Usuwamy duplikaty
     unique = list(set(patterns))
     return unique
 
@@ -68,8 +68,8 @@ def solve_cutting_stock_pulp(
     time_limit: int = 30,
 ) -> Tuple[List[Dict], int]:
     """
-    Solves the cutting stock problem using pattern generation + ILP (PuLP).
-    Returns a list of patterns and the total number of bars.
+    Rozwiązuje problem cięcia liniowego przez generowanie schematów + ILP (PuLP).
+    Zwraca listę schematów i całkowitą liczbę prętów.
     """
     import pulp
 
@@ -77,26 +77,26 @@ def solve_cutting_stock_pulp(
     if not lengths:
         return [], 0
 
-    # Generate patterns
+    # Generujemy schematy
     patterns = generate_patterns(lengths, stock_length)
     if not patterns:
         return [], 0
 
-    # Limit the number of patterns if there are too many
+    # Ograniczamy liczbę schematów, jeśli jest ich zbyt wiele
     if len(patterns) > 3000:
-        # Keep the densest ones
+        # Zostawiamy najgęstsze
         patterns = sorted(patterns, key=lambda p: sum(p), reverse=True)[:3000]
 
     # Model
     prob = pulp.LpProblem("CuttingStock", pulp.LpMinimize)
 
-    # Variables: how many times each pattern is used
+    # Zmienne: ile razy każdy schemat jest użyty
     x = [pulp.LpVariable(f"p_{i}", lowBound=0, cat="Integer") for i in range(len(patterns))]
 
-    # Objective: minimize bars
+    # Cel: minimum prętów
     prob += pulp.lpSum(x)
 
-    # Demand constraints
+    # Ograniczenia zapotrzebowania
     for length, qty in demands.items():
         prob += (
             pulp.lpSum(x[i] * patterns[i].count(length) for i in range(len(patterns)))
@@ -104,14 +104,14 @@ def solve_cutting_stock_pulp(
             f"demand_{length}",
         )
 
-    # Solve
+    # Rozwiązujemy
     status = prob.solve(pulp.PULP_CBC_CMD(msg=False, timeLimit=time_limit))
 
     if pulp.LpStatus[status] not in ("Optimal", "Feasible"):
-        # Fallback — simple First Fit Decreasing
+        # Fallback — proste First Fit Decreasing
         return solve_ffd(demands, stock_length)
 
-    # Collect results
+    # Zbieramy wyniki
     result_patterns = []
     total_bars = 0
     for i, var in enumerate(x):
@@ -126,22 +126,22 @@ def solve_cutting_stock_pulp(
             })
             total_bars += cnt
 
-    # Sort by descending usage
+    # Sortujemy malejąco według wykorzystania
     result_patterns.sort(key=lambda p: (-p["used"], -p["count"]))
     return result_patterns, total_bars
 
 
 def solve_ffd(demands: Dict[int, int], stock_length: int) -> Tuple[List[Dict], int]:
     """
-    First Fit Decreasing + greedy filling.
-    Reliable fallback.
+    First Fit Decreasing + zachłanne wypełnianie.
+    Niezawodny fallback.
     """
-    # Expand into a list of pieces
+    # Rozwijamy do listy elementów
     items = []
     for L, q in sorted(demands.items(), reverse=True):
         items.extend([L] * q)
 
-    bars = []  # each bar is a list of lengths
+    bars = []  # każdy pręt to lista długości
 
     for item in items:
         placed = False
@@ -153,7 +153,7 @@ def solve_ffd(demands: Dict[int, int], stock_length: int) -> Tuple[List[Dict], i
         if not placed:
             bars.append([item])
 
-    # Group identical patterns
+    # Grupujemy identyczne schematy
     from collections import defaultdict
     groups = defaultdict(int)
     for bar in bars:
@@ -180,7 +180,7 @@ def solve_cutting_stock(
     method: str = "auto",
 ) -> Tuple[List[Dict], int]:
     """
-    Main entry point.
+    Główny punkt wejścia.
     method: "auto" | "ilp" | "ffd"
     """
     total_pieces = sum(demands.values())
@@ -196,7 +196,7 @@ def solve_cutting_stock(
 
 
 # ============================================================
-#  Helper functions
+#  Funkcje pomocnicze
 # ============================================================
 
 def prepare_demands(
@@ -206,30 +206,30 @@ def prepare_demands(
     end_cut: float,
 ) -> Tuple[Dict[int, int], float, List[str]]:
     """
-    Builds the demand dictionary taking the kerf into account.
-    Returns (demands, effective_stock, warnings)
+    Buduje słownik zapotrzebowania z uwzględnieniem cięcia (kerf).
+    Zwraca (demands, effective_stock, warnings)
     """
     warnings = []
     effective_stock = stock_length - end_cut
     demands: Dict[int, int] = {}
 
     for _, row in df.iterrows():
-        length = float(row["Length, mm"])
-        qty = int(row["Quantity"])
+        length = float(row["Długość, mm"])
+        qty = int(row["Ilość"])
         if length <= 0 or qty <= 0:
             continue
 
-        # The kerf is added to each piece length
+        # Do długości elementu dodajemy cięcie
         effective_length = length + kerf
 
         if effective_length > effective_stock:
             warnings.append(
-                f"Piece {length} mm (with kerf {effective_length:.1f}) "
-                f"is longer than the bar ({effective_stock:.1f} mm) — skipped"
+                f"Element {length} mm (z cięciem {effective_length:.1f}) "
+                f"jest dłuższy niż pręt ({effective_stock:.1f} mm) — pominięto"
             )
             continue
 
-        # Work with integers (mm)
+        # Pracujemy na liczbach całkowitych (mm)
         L = int(round(effective_length))
         demands[L] = demands.get(L, 0) + qty
 
@@ -237,87 +237,87 @@ def prepare_demands(
 
 
 def format_pattern(pieces: List[int], kerf: float) -> str:
-    """Shows the real piece lengths (without the kerf)."""
+    """Pokazuje rzeczywiste długości elementów (bez cięcia)."""
     real = [max(0, int(round(p - kerf))) for p in pieces]
     return " + ".join(map(str, real))
 
 
 # ============================================================
-#  Interface
+#  Interfejs
 # ============================================================
 
 def main():
-    st.title("✂️ Linear cutting calculator")
-    st.caption("Modern version · Streamlit + mathematical optimization")
+    st.title("✂️ Kalkulator cięcia liniowego")
+    st.caption("Nowoczesna wersja · Streamlit + optymalizacja matematyczna")
 
-    # ---------- Sidebar ----------
+    # ---------- Panel boczny ----------
     with st.sidebar:
-        st.header("Bar parameters")
+        st.header("Parametry pręta")
         stock_length = st.number_input(
-            "Bar length, mm",
+            "Długość pręta, mm",
             min_value=100.0,
             value=6000.0,
             step=100.0,
-            help="Standard length of profile / pipe / timber",
+            help="Standardowa długość profilu / rury / drewna",
         )
         end_cut = st.number_input(
-            "End trim, mm",
+            "Przycięcie czołowe, mm",
             min_value=0.0,
             value=0.0,
             step=1.0,
-            help="How much is cut off the end of the bar (end trimming)",
+            help="Ile jest odcinane z końca pręta (przycięcie czołowe)",
         )
         kerf = st.number_input(
-            "Tool width (kerf), mm",
+            "Szerokość narzędzia (cięcie), mm",
             min_value=0.0,
             value=3.0,
             step=0.5,
-            help="Cut thickness. Added to each piece",
+            help="Grubość cięcia. Dodawana do każdego elementu",
         )
         min_remnant = st.number_input(
-            "Minimum useful remnant, mm",
+            "Minimalny użyteczny odcinek, mm",
             min_value=0.0,
             value=0.0,
             step=10.0,
-            help="Remnants shorter than this count as waste (informational for now)",
+            help="Odcinki krótsze niż ta wartość są traktowane jako odpad (na razie informacyjnie)",
         )
 
         st.divider()
         method = st.selectbox(
-            "Optimization method",
+            "Metoda optymalizacji",
             options=["auto", "ilp", "ffd"],
             format_func=lambda x: {
-                "auto": "Auto (recommended)",
-                "ilp": "ILP (exact, slower)",
-                "ffd": "First Fit Decreasing (fast)",
+                "auto": "Auto (zalecane)",
+                "ilp": "ILP (dokładna, wolniejsza)",
+                "ffd": "First Fit Decreasing (szybka)",
             }[x],
-            help="ILP searches for a near-optimal cutting plan. FFD is a very fast heuristic.",
+            help="ILP szuka planu cięcia bliskiego optymalnemu. FFD to bardzo szybka heurystyka.",
         )
 
         st.divider()
-        st.markdown("**Example data**")
-        if st.button("Load example from old Excel"):
+        st.markdown("**Przykładowe dane**")
+        if st.button("Wczytaj przykład ze starego Excela"):
             st.session_state["example_loaded"] = True
 
-    # ---------- Pieces table ----------
-    st.subheader("Pieces")
+    # ---------- Tabela elementów ----------
+    st.subheader("Elementy")
 
     if "example_loaded" in st.session_state and st.session_state["example_loaded"]:
         default_df = pd.DataFrame({
-            "Name": [
-                "Piece 1", "Piece 2", "Piece 3", "Piece 4",
-                "Piece 5", "Piece 6", "Piece 7", "Piece 8"
+            "Nazwa": [
+                "Element 1", "Element 2", "Element 3", "Element 4",
+                "Element 5", "Element 6", "Element 7", "Element 8"
             ],
-            "Length, mm": [540, 790, 1680, 580, 390, 680, 760, 1200],
-            "Quantity": [2, 2, 4, 2, 2, 2, 4, 4],
+            "Długość, mm": [540, 790, 1680, 580, 390, 680, 760, 1200],
+            "Ilość": [2, 2, 4, 2, 2, 2, 4, 4],
         })
-        # Reset the flag so it can be edited again
+        # Resetujemy flagę, żeby można było edytować ponownie
         st.session_state["example_loaded"] = False
     else:
         default_df = pd.DataFrame({
-            "Name": ["Piece 1", "Piece 2"],
-            "Length, mm": [1500.0, 2200.0],
-            "Quantity": [4, 6],
+            "Nazwa": ["Element 1", "Element 2"],
+            "Długość, mm": [1500.0, 2200.0],
+            "Ilość": [4, 6],
         })
 
     df = st.data_editor(
@@ -325,22 +325,22 @@ def main():
         num_rows="dynamic",
         use_container_width=True,
         column_config={
-            "Name": st.column_config.TextColumn("Name", width="medium"),
-            "Length, mm": st.column_config.NumberColumn("Length, mm", min_value=1, step=1, format="%.0f"),
-            "Quantity": st.column_config.NumberColumn("Quantity", min_value=1, step=1),
+            "Nazwa": st.column_config.TextColumn("Nazwa", width="medium"),
+            "Długość, mm": st.column_config.NumberColumn("Długość, mm", min_value=1, step=1, format="%.0f"),
+            "Ilość": st.column_config.NumberColumn("Ilość", min_value=1, step=1),
         },
         key="pieces_editor",
     )
 
     col_run, col_clear = st.columns([1, 5])
     with col_run:
-        run = st.button("Calculate cutting plan", type="primary", use_container_width=True)
+        run = st.button("Oblicz plan cięcia", type="primary", use_container_width=True)
 
-    # ---------- Calculation ----------
+    # ---------- Obliczenia ----------
     if run:
-        # Validation
-        if df.empty or df["Length, mm"].isna().all():
-            st.error("Add at least one piece")
+        # Walidacja
+        if df.empty or df["Długość, mm"].isna().all():
+            st.error("Dodaj przynajmniej jeden element")
             return
 
         demands, effective_stock, warnings = prepare_demands(
@@ -351,95 +351,95 @@ def main():
             st.warning(w)
 
         if not demands:
-            st.error("No piece fits into the bar")
+            st.error("Żaden element nie mieści się w pręcie")
             return
 
-        with st.spinner("Optimizing cutting plan..."):
+        with st.spinner("Optymalizuję plan cięcia..."):
             patterns, total_bars = solve_cutting_stock(
                 demands, int(round(effective_stock)), method=method
             )
 
         if total_bars == 0:
-            st.error("Failed to build a cutting plan")
+            st.error("Nie udało się utworzyć planu cięcia")
             return
 
-        # ---------- Results ----------
+        # ---------- Wyniki ----------
         total_length_needed = sum(
             (L - kerf) * q for L, q in demands.items()
         )
         total_stock_length = total_bars * stock_length
         total_waste = total_stock_length - total_length_needed - total_bars * end_cut
-        # More accurate waste calculation accounting for kerfs
+        # Dokładniejsze obliczenie odpadu z uwzględnieniem cięć
         total_kerf_loss = sum(kerf * q for q in demands.values())
         usable = total_length_needed
         efficiency = (usable / (total_bars * effective_stock)) * 100 if total_bars else 0
 
-        st.success(f"**Done!** Used **{total_bars}** bar(s)")
+        st.success(f"**Gotowe!** Użyto **{total_bars}** pręt(ów)")
 
-        # Metrics
+        # Metryki
         m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Bars", total_bars)
-        m2.metric("Usage", f"{efficiency:.1f}%")
-        m3.metric("Total useful length", f"{usable:.0f} mm")
-        m4.metric("Total waste", f"{total_bars * effective_stock - sum(p['used'] * p['count'] for p in patterns):.0f} mm")
+        m1.metric("Pręty", total_bars)
+        m2.metric("Wykorzystanie", f"{efficiency:.1f}%")
+        m3.metric("Całkowita długość użytkowa", f"{usable:.0f} mm")
+        m4.metric("Całkowity odpad", f"{total_bars * effective_stock - sum(p['used'] * p['count'] for p in patterns):.0f} mm")
 
         st.divider()
 
-        # Cutting patterns table
-        st.subheader("Cutting patterns")
+        # Tabela schematów cięcia
+        st.subheader("Schematy cięcia")
 
         rows = []
         for idx, p in enumerate(patterns, 1):
             real_pieces = [max(0, int(round(x - kerf))) for x in p["pieces"]]
             rows.append({
-                "#": idx,
-                "Pattern (piece lengths)": " + ".join(map(str, real_pieces)),
-                "Used, mm": int(round(p["used"] + end_cut)),
-                "Remainder, mm": int(round(effective_stock - p["used"])),
-                "Repeats": p["count"],
-                "Pieces in pattern": len(p["pieces"]),
+                "Lp.": idx,
+                "Schemat (długości elementów)": " + ".join(map(str, real_pieces)),
+                "Użyto, mm": int(round(p["used"] + end_cut)),
+                "Pozostałość, mm": int(round(effective_stock - p["used"])),
+                "Powtórzenia": p["count"],
+                "Elementów w schemacie": len(p["pieces"]),
             })
 
         result_df = pd.DataFrame(rows)
         st.dataframe(result_df, use_container_width=True, hide_index=True)
 
-        # Visualization
-        st.subheader("Pattern visualization")
+        # Wizualizacja
+        st.subheader("Wizualizacja schematów")
         show_visualization(patterns, effective_stock, kerf, end_cut)
 
-        # Export
+        # Eksport
         st.divider()
-        st.subheader("Export")
+        st.subheader("Eksport")
         export_df = result_df.copy()
         csv = export_df.to_csv(index=False).encode("utf-8-sig")
         st.download_button(
-            "Download CSV",
+            "Pobierz CSV",
             data=csv,
-            file_name="cutting_plan.csv",
+            file_name="plan_ciecia.csv",
             mime="text/csv",
         )
 
-        # Detailed text report
-        with st.expander("Text report (for printing)"):
+        # Szczegółowy raport tekstowy
+        with st.expander("Raport tekstowy (do druku)"):
             report = []
-            report.append(f"Bar length: {stock_length} mm")
-            report.append(f"End trim: {end_cut} mm")
-            report.append(f"Kerf: {kerf} mm")
-            report.append(f"Total bars: {total_bars}")
-            report.append(f"Usage: {efficiency:.1f}%")
+            report.append(f"Długość pręta: {stock_length} mm")
+            report.append(f"Przycięcie czołowe: {end_cut} mm")
+            report.append(f"Cięcie: {kerf} mm")
+            report.append(f"Razem prętów: {total_bars}")
+            report.append(f"Wykorzystanie: {efficiency:.1f}%")
             report.append("")
             for idx, p in enumerate(patterns, 1):
                 real = [max(0, int(round(x - kerf))) for x in p["pieces"]]
                 report.append(
-                    f"Pattern {idx} × {p['count']}: "
+                    f"Schemat {idx} × {p['count']}: "
                     f"{' + '.join(map(str, real))}  "
-                    f"(remainder {effective_stock - p['used']:.0f} mm)"
+                    f"(pozostałość {effective_stock - p['used']:.0f} mm)"
                 )
             st.code("\n".join(report))
 
 
 def show_visualization(patterns, effective_stock, kerf, end_cut):
-    """Simple bar visualization using HTML."""
+    """Prosta wizualizacja pasków za pomocą HTML."""
     colors = [
         "#4e79a7", "#f28e2b", "#e15759", "#76b7b2", "#59a14f",
         "#edc948", "#b07aa1", "#ff9da7", "#9c755f", "#bab0ac",
@@ -451,9 +451,9 @@ def show_visualization(patterns, effective_stock, kerf, end_cut):
         used = p["used"]
         waste = effective_stock - used
 
-        # Bar strip
+        # Pasek pręta
         bar_html = f'<div style="margin-bottom:14px;">'
-        bar_html += f'<div style="font-size:13px; margin-bottom:4px;"><b>Pattern {idx+1}</b> × {p["count"]} &nbsp;|&nbsp; remainder {waste:.0f} mm</div>'
+        bar_html += f'<div style="font-size:13px; margin-bottom:4px;"><b>Schemat {idx+1}</b> × {p["count"]} &nbsp;|&nbsp; pozostałość {waste:.0f} mm</div>'
         bar_html += '<div style="display:flex; height:28px; border:1px solid #ccc; border-radius:4px; overflow:hidden; background:#f0f0f0;">'
 
         for i, length in enumerate(p["pieces"]):
@@ -469,7 +469,7 @@ def show_visualization(patterns, effective_stock, kerf, end_cut):
         if waste > 0.5:
             pct_w = (waste / effective_stock) * 100
             bar_html += (
-                f'<div title="Waste {waste:.0f} mm" style="width:{pct_w}%; background:#e0e0e0; '
+                f'<div title="Odpad {waste:.0f} mm" style="width:{pct_w}%; background:#e0e0e0; '
                 f'display:flex; align-items:center; justify-content:center; '
                 f'color:#666; font-size:11px;">{int(round(waste))}</div>'
             )
@@ -483,4 +483,4 @@ def show_visualization(patterns, effective_stock, kerf, end_cut):
 if __name__ == "__main__":
     main()
 
-# Version 1.0
+# Wersja 1.0

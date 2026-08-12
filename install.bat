@@ -42,4 +42,5 @@ echo  Installation completed successfully!
 echo  Run the application with:
 echo      .\.venv\Scripts\streamlit run app.py
 echo ============================================
+echo  Version 1.0
 pause
