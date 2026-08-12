@@ -61,10 +61,6 @@ Double-click the desired script, or run manually:
 - **ILP** — mathematical optimization (PuLP + CBC), close to optimal
 - **First Fit Decreasing** — very fast heuristic algorithm
 
-## Example from the old Excel
-
-In the sidebar there is a "Load example from old Excel" button — fills in data from the V1.03 file (bar 2000 mm, kerf 5 mm).
-
 ---
 
 Version 1.0
