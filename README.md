@@ -1,4 +1,4 @@
-[Cutting Calculator](./image.png)
+![Cutting Calculato](image.png)
 
 # Linear Cutting Calculator (Streamlit)
 
