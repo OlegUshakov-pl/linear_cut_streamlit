@@ -214,6 +214,8 @@ def prepare_demands(
     demands: Dict[int, int] = {}
 
     for _, row in df.iterrows():
+        if pd.isna(row["Длина, мм"]) or pd.isna(row["Количество"]):
+            continue
         length = float(row["Длина, мм"])
         qty = int(row["Количество"])
         if length <= 0 or qty <= 0:

@@ -5,14 +5,14 @@ setlocal
 cd /d "%~dp0"
 
 if not exist ".venv\Scripts\streamlit.exe" (
-    echo Виртуальное окружение не найдено.
-    echo Сначала запустите install.bat.
+    echo Virtual environment not found.
+    echo Run install.bat first.
     pause
     exit /b 1
 )
 
-echo Запуск Калькулятора линейного раскроя (русский)...
+echo Starting Linear Cutting Calculator (Russian)...
 call ".venv\Scripts\streamlit.exe" run app_ru.py
 echo.
-echo  Версия 1.0
+echo  Version 1.0
 pause
