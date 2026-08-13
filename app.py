@@ -296,31 +296,14 @@ def main():
             help="ILP searches for a near-optimal cutting plan. FFD is a very fast heuristic.",
         )
 
-        st.divider()
-        st.markdown("**Example data**")
-        if st.button("Load example from old Excel"):
-            st.session_state["example_loaded"] = True
-
     # ---------- Pieces table ----------
     st.subheader("Pieces")
 
-    if "example_loaded" in st.session_state and st.session_state["example_loaded"]:
-        default_df = pd.DataFrame({
-            "Name": [
-                "Piece 1", "Piece 2", "Piece 3", "Piece 4",
-                "Piece 5", "Piece 6", "Piece 7", "Piece 8"
-            ],
-            "Length, mm": [540, 790, 1680, 580, 390, 680, 760, 1200],
-            "Quantity": [2, 2, 4, 2, 2, 2, 4, 4],
-        })
-        # Reset the flag so it can be edited again
-        st.session_state["example_loaded"] = False
-    else:
-        default_df = pd.DataFrame({
-            "Name": ["Piece 1", "Piece 2"],
-            "Length, mm": [1500.0, 2200.0],
-            "Quantity": [4, 6],
-        })
+    default_df = pd.DataFrame({
+        "Name": ["Piece 1", "Piece 2"],
+        "Length, mm": [1500.0, 2200.0],
+        "Quantity": [4, 6],
+    })
 
     df = st.data_editor(
         default_df,

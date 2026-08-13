@@ -296,31 +296,14 @@ def main():
             help="ILP szuka planu cięcia bliskiego optymalnemu. FFD to bardzo szybka heurystyka.",
         )
 
-        st.divider()
-        st.markdown("**Przykładowe dane**")
-        if st.button("Wczytaj przykład ze starego Excela"):
-            st.session_state["example_loaded"] = True
-
     # ---------- Tabela elementów ----------
     st.subheader("Elementy")
 
-    if "example_loaded" in st.session_state and st.session_state["example_loaded"]:
-        default_df = pd.DataFrame({
-            "Nazwa": [
-                "Element 1", "Element 2", "Element 3", "Element 4",
-                "Element 5", "Element 6", "Element 7", "Element 8"
-            ],
-            "Długość, mm": [540, 790, 1680, 580, 390, 680, 760, 1200],
-            "Ilość": [2, 2, 4, 2, 2, 2, 4, 4],
-        })
-        # Resetujemy flagę, żeby można było edytować ponownie
-        st.session_state["example_loaded"] = False
-    else:
-        default_df = pd.DataFrame({
-            "Nazwa": ["Element 1", "Element 2"],
-            "Długość, mm": [1500.0, 2200.0],
-            "Ilość": [4, 6],
-        })
+    default_df = pd.DataFrame({
+        "Nazwa": ["Element 1", "Element 2"],
+        "Długość, mm": [1500.0, 2200.0],
+        "Ilość": [4, 6],
+    })
 
     df = st.data_editor(
         default_df,
