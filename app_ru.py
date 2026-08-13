@@ -100,7 +100,7 @@ def solve_cutting_stock_pulp(
     for length, qty in demands.items():
         prob += (
             pulp.lpSum(x[i] * patterns[i].count(length) for i in range(len(patterns)))
-            >= qty,
+            == qty,
             f"demand_{length}",
         )
 
