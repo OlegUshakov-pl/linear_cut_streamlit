@@ -1,6 +1,4 @@
 @echo off
-setlocal
-
 cd /d "%~dp0"
 
 if not exist "..\venv\Scripts\streamlit.exe" (
@@ -11,7 +9,5 @@ if not exist "..\venv\Scripts\streamlit.exe" (
 )
 
 echo Starting Linear Cutting Calculator...
-call "..\venv\Scripts\streamlit.exe" run app.py
-echo.
-echo  Version 1.0
+call ..\venv\Scripts\streamlit.exe run app.py
 pause

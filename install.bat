@@ -1,14 +1,12 @@
 @echo off
-setlocal
-
 cd /d "%~dp0"
 
 echo ============================================
-echo  Linear Cutting Calculator installation
+echo  Linear Cutting Calculator — installation
 echo ============================================
 echo.
 
-if not exist "..\venv" (
+if not exist "..\venv\Scripts\python.exe" (
     echo [1/3] Creating virtual environment in parent folder...
     python -m venv ..\venv
     if errorlevel 1 (
@@ -21,15 +19,15 @@ if not exist "..\venv" (
 )
 
 echo [2/3] Upgrading pip...
-call "..\venv\Scripts\python.exe" -m pip install --upgrade pip
+call ..\venv\Scripts\python.exe -m pip install --upgrade pip
 if errorlevel 1 (
     echo Error while upgrading pip.
     pause
     exit /b 1
 )
 
-echo [3/3] Installing dependencies from requirements.txt...
-call "..\venv\Scripts\python.exe" -m pip install -r "%~dp0requirements.txt"
+echo [3/3] Installing dependencies...
+call ..\venv\Scripts\python.exe -m pip install -r requirements.txt
 if errorlevel 1 (
     echo Error while installing dependencies.
     pause
@@ -38,9 +36,6 @@ if errorlevel 1 (
 
 echo.
 echo ============================================
-echo  Installation completed successfully!
-echo  Run the application with:
-echo      start.bat
+echo  Installation complete! Run start.bat
 echo ============================================
-echo  Version 1.0
 pause
