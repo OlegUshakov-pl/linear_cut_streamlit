@@ -2,7 +2,7 @@
 
 # Linear Cutting Calculator (Streamlit)
 
-Modern replacement for the old Excel linear cutting stock calculator (version Bakanov 1.03).
+Modern replacement for the old Excel linear cutting stock calculator.
 Available in three languages: **English**, **Russian**, **Polish**.
 
 The app optimizes the 1D cutting stock problem: given standard bar lengths and
